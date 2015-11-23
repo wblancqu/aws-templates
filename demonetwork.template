@@ -1,0 +1,104 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Base VPC, Network scaffolding. This is a demo, use at your OWN RISK",
+  "Metadata": {
+    "Version": "v0.1",
+    "LastUpdated": "2015-11-20",
+    "UpdatedBy": "cybermerc"
+  },
+  "Parameters": {
+    "VPCCIDR": {
+      "Description": "The IP address space to be used for this VPC, in CIDR notation",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "10.0.0.0/16",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "Must be a valid CIDR range of the form x.x.x.x/x."
+    },
+    "AvailabilityZoneCount": {
+      "Description": "Number of Availability Zones",
+      "Type": "String",
+      "Default": "2 AZs",
+      "AllowedValues": [ "2 AZs", "3 AZs" ],
+      "ConstraintDescription": "Must be either 2 or 3."
+    },
+    "PublicSubnetAZ1": {
+      "Description": "Public IP subnet used for AZ1.  Default 10.0.1.0/24",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "10.0.1.0/24",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "Must be a valid CIDR range of the form x.x.x.x/x."
+    },
+    "InstanceTenancy": {
+      "Description": "VPC default for single tenant (dedicated) vs multi-tenant (default) hypervisor. Overrides instance level tenancy option.",
+      "Type": "String",
+      "Default": "default",
+      "AllowedValues": [ "default", "dedicated" ],
+      "ConstraintDescription": "Must be either 'default' for multi-tenant hypervisor or 'dedicated' for single tenant hypervisor."
+    },
+    "Environment": {
+      "Description": "Application environment tag for purpose the network is being created.",
+      "Type": "String",
+      "Default": "Development",
+      "AllowedValues": ["Development", "Test", "Integration", "PreProduction", "Production"]
+    },
+    "PublicSubnetAZ2": {
+      "Description": "Public IP subnet used for AZ2.  Default 10.0.2.0/24",
+      "Type": "String",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "10.0.2.0/24",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "Must be a valid CIDR range of the form x.x.x.x/x."
+    }
+  },
+  "Resources": {
+    "VPCBase": {
+      "Type": "AWS::EC2::VPC",
+      "Properties": {
+        "CidrBlock": { "Ref": "VPCCIDR"},
+        "EnableDnsSupport": "True",
+        "EnableDnsHostnames": "True",
+        "InstanceTenancy": { "Ref": "InstanceTenancy"},
+        "Tags": [
+          { "Key": "Name", "Value":    { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "VPC"]] } },
+          { "Key": "Environment", "Value": { "Ref": "Environment"} }
+        ]
+      }
+    },
+    "PublicNetAZ1": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "AvailabilityZone": { "Fn::Select": [ "0", { "Fn::GetAZs": { "Ref": "AWS::Region" } } ] },
+        "CidrBlock": { "Ref": "PublicSubnetAZ1"},
+        "MapPublicIpOnLaunch": "True",
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "PublicAZ1"]] } },
+          { "Key": "Environment", "Value": { "Ref": "Environment"} }
+        ],
+        "VpcId": { "Ref": "VPCBase" }
+      }
+    },
+    "PublicNetAZ2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "AvailabilityZone": { "Fn::Select": [ "1", { "Fn::GetAZs": { "Ref": "AWS::Region" } } ] },
+        "CidrBlock": { "Ref": "PublicSubnetAZ2"},
+        "MapPublicIpOnLaunch": "True",
+        "Tags": [
+          { "Key": "Name", "Value": { "Fn::Join" : ["", [{ "Ref" : "AWS::StackName" }, "PublicAZ2"]] } },
+          { "Key": "Environment", "Value": { "Ref": "Environment"} }
+        ],
+        "VpcId": { "Ref": "VPCBase" }
+      }
+    }
+  },
+  "Outputs": {
+    "outputVPCID" : { "Value" : { "Ref" : "VPCBase" } },
+    "outputSubnetPublicAZ1" : { "Value" : { "Ref" : "PublicNetAZ1"} },
+    "outputSubnetPublicAZ2" : { "Value" : { "Ref" : "PublicNetAZ2"} }
+  }
+}
